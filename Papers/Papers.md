@@ -5,7 +5,7 @@
 ### A Wavenet for Speech Denoising (Rethage et al., 2018)
 
 - [link](https://arxiv.org/abs/1706.07162)
-- [notes](WavenetForSpeechDenoising)
+- [notes](WavenetForSpeechDenoising.md)
 
 ### SEGAN:Speech Enhancement Generative Adversarial Network (Pascual et al., 2017)
 
