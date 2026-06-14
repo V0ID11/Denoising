@@ -10,6 +10,7 @@
 ### SEGAN:Speech Enhancement Generative Adversarial Network (Pascual et al., 2017)
 
 - [link](https://arxiv.org/abs/1703.09452)
+- [notes](/SEGAN.md)
 
 ## Core Architecture
 
