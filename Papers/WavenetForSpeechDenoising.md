@@ -45,7 +45,46 @@
 - Perform more coarse 8-bit quantization to make the tsk computationally tractable
 - Accomplished via a $\mu$-law non-linear companding
   $$
-    f(x_t)=sign(x_t)\frac{ln(1+\mu |x_t|)}{ln(1+\mu)}
+    f(x_t)=sign(x_t)\frac{ln(1+\mu \|x_t\|)}{ln(1+\mu)}
   $$
 
+#### Skip Connections
+
+- Facilitate training deep models
+- Enable information at each layer to be propagated directly to the final layers.
+- Allows the network to explicitly incorporate features extracted at several hierarchical levels
+
+#### Context Stacks
+
+- Deepen the network without increasing the receptive field length as drastically as increasing the dilation factor does
+- Achieved by stacking a set of layers, dilated to some maximum dilation factor on top of each other
+- Can be done as many times as required
+
+#### Time Complexity
+
+- Significant drawback of Wavenet is its sequential generation of samples
+
 ## Wavenet for Speech Denoising
+
+- Speech denoising techniques aim to improve the intelligibility and overall perceptual quality of speech
+- Problem typically formulated as follows
+  - $m_t=s_t+b_t$
+  - Where
+    - $m_t$ is mixed signal
+    - $s_t$ is speech signal
+    - $b_t$ is background noise
+- Goal is to estimate $s_t$ given $m_t$
+
+### Non-Causality
+
+- Some future samples are generally available to help make more well informed predictions
+- Model has access to valuable information about samples occuring shortly after a particular sample of interest
+- Autoregressive causal nature removed in proposed model.
+- Larger filters generally showed inferior performance
+
+### Real-value predictions
+
+- Wavenet uses a discrete softmax output to avoid making any assumption on the shape of the output's distribution
+- Suitable for modeling multi-modal distributions
+- Early-experimentations with discrete softmax proved disadvantageous
+- Real-valued predictions (assuming uni-modal gaussian shaped output distributions) seem to be more appropriate
