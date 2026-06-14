@@ -44,9 +44,9 @@
 
 - Perform more coarse 8-bit quantization to make the tsk computationally tractable
 - Accomplished via a $\mu$-law non-linear companding
-  $
-    f(x_t)=sign(x_t)\frac{ln(1+\mu|x_t|)}{ln(1+\mu)}
-  $
+  $$
+f(x_t) = \text{sign}(x_t)\frac{\ln(1+\mu|x_t|)}{\ln(1+\mu)}
+$$
 
 #### Skip Connections
 
