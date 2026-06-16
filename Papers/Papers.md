@@ -29,6 +29,7 @@
 ### Real-Time Speech Enhancement in the Waveform Domain (Defossez et al., 2020)
 
 - [link](https://arxiv.org/abs/2006.12847)
+- [notes](/Papers/RTSEWD.md)
 
 ### DCCRN : Deep Complex Convolution Reccurrent Network (Hu et al., 2020)
 

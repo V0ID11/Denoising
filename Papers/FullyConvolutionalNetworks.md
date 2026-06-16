@@ -1,9 +1,9 @@
 - Instead of explicitly modelling the extra noise
 - We focus on learning a mapping between nosy speech spectra and clean speech spectra
+- CNNs already proved efficacy on extracting features in speech recognition
 - Model size often exceeds several hundreds of megabytes limiting usability on embedded systems
 - CNNs consist of fewer parameters than FNNs and RNNs due to its weight sharing property
-- CNNs already proved efficacy on extracting features in speech recognition
-  - or on eliminating noises in images
+  or on eliminating noises in images
 - Can perform better than other NN styles with a much smaller network size
 - Uses a new architecture
   - Redundant Convolutional Encoder Decoder (R-CED)
