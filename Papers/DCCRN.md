@@ -1,0 +1,21 @@
+- Interference severely decreases perceptual quality and intelligibility in speech communication.
+- Related tasks such as ASR (automatic speech recognition) can be heavily affected by interference
+- Deep Learning techniques produced very promising results.
+- Especially for non-stationary noises in challenging conditions
+- Targeted to realtime processing with low model complexity .
+- Supervised learning problem, noisy speech can be enhanced by neural networks in either time-frequency domain or directly in the time-domain.
+- Time-domain approaches can further fall into two categories
+  - direct regression
+    - learns a regression function from the wave form of a speech-noise mixture to the target speech without an explicit signal front end.
+    - typically involves some form of 1-D convolutional neural network
+    - Usually adopt a convolution encoder-decoder (CED) or a u-net framework
+    - Resembles short-time Fourier transform and its inversions
+    - Enhancement network then inserted between the encoder and the decoder typically by using networks with the capacity of temporal modeling, such as temporal convolutional network
+    - And long short-term memory
+  - adaptive front-end approaches
+
+- Time Frequency domain approaches
+  - Work on the spectrogram with the belief that fine-detailed structures of speech and noise can be more separable with TF representations after STFT
+  - Convolution recurrent network is a recent approach that employs a CED structure similar to the one in a time-domain approach
+  - Extracts a high level feature for better separation by 2-D CNN from noisy speech spectrogram.
+  - Can take complex valued or real-valued spectrogram as input

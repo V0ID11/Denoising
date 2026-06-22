@@ -34,6 +34,7 @@
 ### DCCRN : Deep Complex Convolution Reccurrent Network (Hu et al., 2020)
 
 - [link](https://arxiv.org/abs/2008.00264)
+- [notes](/Papers/DCCRN.md)
 
 ## Evaluation
 
