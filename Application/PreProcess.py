@@ -43,6 +43,7 @@ def preprocess_audio(waveform, sample_rate, target_sample_rate=16000):
     if peak > 0:
         waveform = waveform / peak
 
+
     return waveform, target_sample_rate
 
 def compute_stft(waveform, n_fft=512, hop_length=128, win_length=None):
@@ -58,6 +59,8 @@ def compute_stft(waveform, n_fft=512, hop_length=128, win_length=None):
     )
     magnitude = torch.abs(stft)
     phase = torch.angle(stft)
+    magnitude = magnitude[..., :-1, :]
+    phase = phase[..., :-1, :]
     return magnitude, phase
 
 def magnitude_to_log(magnitude, eps=1e-5):
@@ -67,6 +70,15 @@ def log_to_magnitude(log_magnitude, eps=1e-5):
     return torch.exp(log_magnitude) - eps
 
 def reconstruct_waveform(magnitude, phase, n_fft=512, hop_length=128, win_length=None):
+    # Remove extra channel dimension if present (e.g. [B, 1, F, T] -> [B, F, T])
+    if magnitude.dim() == 4 and magnitude.size(1) == 1:
+        magnitude = magnitude.squeeze(1)
+    if phase.dim() == 4 and phase.size(1) == 1:
+        phase = phase.squeeze(1)
+
+    magnitude = torch.nn.functional.pad(magnitude, (0, 0, 0, 1))  # pad freq axis by 1 zero row
+    phase = torch.nn.functional.pad(phase, (0, 0, 0, 1))
+
     win_length = win_length if win_length is not None else n_fft
     window = torch.hann_window(win_length)
     complex_stft = torch.polar(magnitude, phase)
@@ -98,6 +110,18 @@ def pair_noisy_clean_files(noisy_dir, clean_dir):
     return pairs
 
 
+def split_pairs_by_speaker(pairs, val_speakers=("p226", "p287")):
+   
+    train_pairs, val_pairs = [], []
+    for noisy_path, clean_path in pairs:
+        speaker = os.path.basename(noisy_path).split("_")[0]
+        if speaker in val_speakers:
+            val_pairs.append((noisy_path, clean_path))
+        else:
+            train_pairs.append((noisy_path, clean_path))
+    return train_pairs, val_pairs
+
+
 class DenoisingSTFTDataset(Dataset):
     """
     Dataset for U-Net style denoising 
@@ -105,8 +129,10 @@ class DenoisingSTFTDataset(Dataset):
     Each item fixed size (in time frames)
     """
 
-    def __init__(self, noisy_dir, clean_dir, sample_rate=16000, n_fft=512, hop_length=128, segment_frames=128, log_compress=True):
-        self.pairs = pair_noisy_clean_files(noisy_dir, clean_dir)
+    def __init__(self, noisy_dir, clean_dir, sample_rate=16000, n_fft=512, hop_length=128,
+                 segment_frames=128, log_compress=True, pairs=None):
+     
+        self.pairs = pairs if pairs is not None else pair_noisy_clean_files(noisy_dir, clean_dir)
         self.sample_rate = sample_rate
         self.n_fft = n_fft
         self.hop_length = hop_length
@@ -150,17 +176,22 @@ class DenoisingSTFTDataset(Dataset):
             noisy_phase = noisy_phase[..., start:end]
         else:
             # Zero-pad the time dimension if shorter than segment_frames
-            pad_amount = self.segment_frames - total_frames
+            pad_amount = self.segment_frames - total_frames 
             # (pad_left, pad_right) applies to the LAST dimension (time)
             noisy_mag = torch.nn.functional.pad(noisy_magnitude, (0, pad_amount))
             clean_mag = torch.nn.functional.pad(clean_magnitude, (0, pad_amount))
             noisy_phase = torch.nn.functional.pad(noisy_phase, (0, pad_amount))
  
+        
+        noisy_mag_linear = noisy_mag
+        clean_mag_linear = clean_mag
+
         if self.log_compress:
-            noisy_mag = magnitude_to_log(noisy_mag)
-            clean_mag = magnitude_to_log(clean_mag)
- 
-        return noisy_mag, clean_mag, noisy_phase
+            noisy_mag_log = magnitude_to_log(noisy_mag)
+        else:
+            noisy_mag_log = noisy_mag
+
+        return noisy_mag_log, noisy_mag_linear, clean_mag_linear, noisy_phase
 
 
 def visualize_spectrogram(noisy_batch, clean_batch, title="Spectrogram"):
@@ -199,19 +230,20 @@ if __name__ == "__main__":
     
     noisy_dir = "Data/noisy_trainset_28spk_wav/noisy_trainset_28spk_wav"
     clean_dir = "Data/clean_trainset_28spk_wav/clean_trainset_28spk_wav"
+
+    one_file = glob.glob(os.path.join(noisy_dir, "*.wav"))[0]
+    waveform, sample_rate = load_audio(one_file)
+    print(waveform.shape, sample_rate)  # Should be (1, N) for mono audio
  
     dataset = DenoisingSTFTDataset(noisy_dir, clean_dir)
     print(f"Found {len(dataset)} noisy/clean pairs")
  
     loader = DataLoader(dataset, batch_size=8, shuffle=True)
-    noisy_batch, clean_batch, phase_batch = next(iter(loader))
+    noisy_log, noisy_linear, clean_linear, phase_batch = next(iter(loader))
  
-    print("Noisy magnitude batch shape:", noisy_batch.shape)  # (B, 1, freq_bins, segment_frames)
-    print("Clean magnitude batch shape:", clean_batch.shape)
+    print("Noisy log-magnitude batch shape:", noisy_log.shape)  # (B, 1, freq_bins, segment_frames)
+    print("Noisy linear-magnitude batch shape:", noisy_linear.shape)
+    print("Clean linear-magnitude batch shape:", clean_linear.shape)
     print("Phase batch shape:", phase_batch.shape)
 
-    visualize_spectrogram(noisy_batch, clean_batch)
-
-    
-
-    
+    visualize_spectrogram(noisy_log, magnitude_to_log(clean_linear))

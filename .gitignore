@@ -1,2 +1,4 @@
 Data/
 .venv/
+/checkpoints/test_outputs/
+/Application/__pycache__/
