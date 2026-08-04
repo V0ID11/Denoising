@@ -122,6 +122,62 @@ def split_pairs_by_speaker(pairs, val_speakers=("p226", "p287")):
     return train_pairs, val_pairs
 
 
+class DenoisingWaveformDataset(Dataset):
+    """
+    Dataset for waveform based Denoising
+
+    e.g. DEMUCS / RTSEWD
+
+    Each item is cropped/padded to a fixed number of samples (segment_samples)
+    so that variable-length utterances can be batched together. This mirrors
+    the segment_frames logic used in DenoisingSTFTDataset, but operates in the
+    raw waveform domain instead of on STFT frames.
+
+    segment_samples must be divisible by 2**(number of downsampling stages)
+    in the waveform model (e.g. 16 for the default 4-stage RTSEWD), so that
+    the encoder/decoder path lines up exactly without needing to interpolate.
+    """
+
+    def __init__(self, noisy_dir, clean_dir, sample_rate=16000, segment_samples=16384, pairs=None):
+        self.pairs = pairs if pairs is not None else pair_noisy_clean_files(noisy_dir, clean_dir)
+        self.sample_rate = sample_rate
+        self.segment_samples = segment_samples
+
+    def __len__(self):
+        return len(self.pairs)
+
+    def _load_and_preprocess(self, path):
+        waveform, sr = load_audio(path)
+        waveform, sr = preprocess_audio(waveform, sr, self.sample_rate)
+        return waveform
+
+    def __getitem__(self, index):
+        noisy_path, clean_path = self.pairs[index]
+        noisy_waveform = self._load_and_preprocess(noisy_path)
+        clean_waveform = self._load_and_preprocess(clean_path)
+
+        
+        min_len = min(noisy_waveform.shape[-1], clean_waveform.shape[-1])
+        noisy_waveform = noisy_waveform[..., :min_len]
+        clean_waveform = clean_waveform[..., :min_len]
+
+        total_len = noisy_waveform.shape[-1]
+
+        if total_len >= self.segment_samples:
+            
+            start = random.randint(0, total_len - self.segment_samples)
+            end = start + self.segment_samples
+            noisy_waveform = noisy_waveform[..., start:end]
+            clean_waveform = clean_waveform[..., start:end]
+        else:
+           
+            pad_amount = self.segment_samples - total_len
+            noisy_waveform = torch.nn.functional.pad(noisy_waveform, (0, pad_amount))
+            clean_waveform = torch.nn.functional.pad(clean_waveform, (0, pad_amount))
+
+        return noisy_waveform, clean_waveform
+
+
 class DenoisingSTFTDataset(Dataset):
     """
     Dataset for U-Net style denoising 

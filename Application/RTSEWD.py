@@ -16,8 +16,10 @@ class DenoisingRTSEWD(nn.Module):
             self.encoder_blocks.append(
                 nn.Sequential(
                     nn.Conv1d(in_channels, feature, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm1d(feature),
                     nn.ReLU(),
                     nn.Conv1d(feature, feature * 2, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm1d(feature * 2),
                     nn.GLU(dim=1),
                 )
             )
@@ -26,8 +28,10 @@ class DenoisingRTSEWD(nn.Module):
         # Bottleneck
         self.bottleneck = nn.Sequential(
             nn.Conv1d(features[-1], features[-1] * 2, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(features[-1] * 2),
             nn.ReLU(),
             nn.Conv1d(features[-1] * 2, features[-1] * 4, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(features[-1] * 4),
             nn.GLU(dim=1),
         )
 
@@ -39,7 +43,7 @@ class DenoisingRTSEWD(nn.Module):
         in_channels = features[-1] * 2
 
         for feature in reversed_features:
-            # 1. Upsampling layer: restores sequence length, halves channel depth
+            
             self.upconvs.append(
                 nn.ConvTranspose1d(in_channels, feature, kernel_size=2, stride=2)
             )
@@ -48,8 +52,10 @@ class DenoisingRTSEWD(nn.Module):
             self.decoder_blocks.append(
                 nn.Sequential(
                     nn.Conv1d(feature * 2, feature * 2, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm1d(feature * 2),
                     nn.ReLU(),
                     nn.Conv1d(feature * 2, feature * 2, kernel_size=3, stride=1, padding=1),
+                    nn.BatchNorm1d(feature * 2),
                     nn.GLU(dim=1),
                 )
             )
@@ -58,7 +64,7 @@ class DenoisingRTSEWD(nn.Module):
         # Final output layer
         self.final_output = nn.Sequential(
             nn.Conv1d(features[0], output_channels, kernel_size=3, stride=1, padding=1),
-            nn.Sigmoid()
+            nn.Tanh()
         )
 
     def forward(self, x):

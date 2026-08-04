@@ -2,3 +2,4 @@ Data/
 .venv/
 /checkpoints/test_outputs/
 /Application/__pycache__/
+/checkpoints_rtsewd/test_outputs/
