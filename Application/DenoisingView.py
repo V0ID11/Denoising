@@ -17,19 +17,15 @@ from RTSEWD import DenoisingRTSEWD
 from DenoiseController import *
 
 
-class DenoiseSelectorWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Select Denoise")
-        self.resize(1100, 750)
+class DenoiseSelectorWindow(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         self.setupui()
 
     def setupui(self):
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
 
-        layout = QVBoxLayout(central_widget)
+        layout = QVBoxLayout(self)
 
         self.model_selector = QComboBox()
         self.model_selector.addItems(["UNet", "SEGAN"])

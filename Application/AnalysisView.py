@@ -2,11 +2,18 @@ import sys
 import numpy as np
 from scipy.io import wavfile
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QVBoxLayout, QWidget,
-    QFileDialog, QToolBar, QHBoxLayout
+    QApplication,
+    QMainWindow,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+    QFileDialog,
+    QToolBar,
+    QHBoxLayout,
 )
 from PyQt6.QtGui import QAction
 import pyqtgraph as pg
+
 
 def load_audio(filepath):
     """Load a WAV file and return normalized channel data."""
@@ -26,6 +33,7 @@ def load_audio(filepath):
     time_axis = np.arange(data.shape[0]) / sample_rate
     return sample_rate, time_axis, data[:, 0], data[:, 1]
 
+
 def compute_spectrum(signal, sample_rate, max_freq=20000):
     """Compute the frequency spectrum of a signal."""
     n = len(signal)
@@ -39,11 +47,10 @@ def compute_spectrum(signal, sample_rate, max_freq=20000):
     mask = frequencies <= max_freq
     return frequencies[mask], magnitude[mask]
 
-class AudioEditorWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Audio Editor")
-        self.resize(1100, 750)
+
+class AudioEditorWindow(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         self.sample_rate = None
         self.time_axis = None
@@ -51,12 +58,15 @@ class AudioEditorWindow(QMainWindow):
         self.right_data = None
 
         self.setup_ui()
-        self.setup_toolbar()
 
     def setup_ui(self):
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
+
+        layout = QVBoxLayout(self)
+
+        load_button = QPushButton("Choose File")
+        load_button.clicked.connect(self.open_file)
+        layout.addWidget(load_button, stretch=0)
+
         sub_layout = QHBoxLayout()
         layout.addLayout(sub_layout)
 
@@ -95,14 +105,6 @@ class AudioEditorWindow(QMainWindow):
         self.left_plot.addItem(self.region)
         self.region.sigRegionChanged.connect(self.update_spectrum)
 
-    def setup_toolbar(self):
-        toolbar = QToolBar("Main Toolbar")
-        self.addToolBar(toolbar)
-
-        open_action = QAction("Open WAV File", self)
-        open_action.triggered.connect(self.open_file)
-        toolbar.addAction(open_action)
-
     def open_file(self):
         filepath, _ = QFileDialog.getOpenFileName(
             self, "Open WAV File", "", "WAV Files (*.wav)"
@@ -111,8 +113,8 @@ class AudioEditorWindow(QMainWindow):
             self.load_and_display(filepath)
 
     def load_and_display(self, filepath):
-        self.sample_rate, self.time_axis, self.left_data, self.right_data = (
-            load_audio(filepath)
+        self.sample_rate, self.time_axis, self.left_data, self.right_data = load_audio(
+            filepath
         )
 
         # Downsample for display if the file is very large.
@@ -169,11 +171,13 @@ class AudioEditorWindow(QMainWindow):
         self.spectrum_plot.clear()
         self.spectrum_plot.plot(frequencies, magnitude_db, pen=pg.mkPen("y", width=1))
 
+
 def main():
     app = QApplication(sys.argv)
     window = AudioEditorWindow()
     window.show()
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()
