@@ -1,0 +1,8 @@
+torch
+soundfile
+torchaudio
+numpy
+matplotlib
+PyQt6
+scipy
+pyqtgraph

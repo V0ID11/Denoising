@@ -3,3 +3,7 @@ Data/
 /checkpoints/test_outputs/
 /Application/__pycache__/
 /checkpoints_rtsewd/test_outputs/
+clean_testset_wav/
+clean_trainset_28spk_wav/
+noisy_testset_wav/
+noisy_trainset_28spk_wav/
