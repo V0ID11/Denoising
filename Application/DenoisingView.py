@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QLineEdit,
+    QListWidget,
 )
 import torch
 
@@ -38,10 +39,10 @@ class DenoiseSelectorWindow(QWidget):
         layout.addWidget(self.model_file)
         layout.addWidget(self.model_file_selector_button)
 
-        self.audio_file = QLabel("")
+        self.audio_files_list = QListWidget()
         self.audio_file_selector_button = QPushButton("Select Audio File")
         self.audio_file_selector_button.clicked.connect(self.audio_file_selector)
-        layout.addWidget(self.audio_file)
+        layout.addWidget(self.audio_files_list)
         layout.addWidget(self.audio_file_selector_button)
 
         self.output_path = QLineEdit("")
@@ -63,24 +64,32 @@ class DenoiseSelectorWindow(QWidget):
             self.model_file.setText(filepath)
 
     def audio_file_selector(self):
-        filepath, _ = QFileDialog.getOpenFileName(
+        filepaths, _ = QFileDialog.getOpenFileNames(
             self, "Open WAV file", "", "Wav Files (*.wav)"
         )
-        if filepath:
-            self.audio_file.setText(filepath)
+        if filepaths:
+            self.audio_files = filepaths
+            self.audio_files_list.clear()
+            self.audio_files_list.addItems([os.path.basename(p) for p in filepaths])
 
     def output_file_selector(self):
-        filepath, _ = QFileDialog.getSaveFileName(
-            self, "Save Clean WAV File", "output.wav", "Wav Files (*.wav)"
-        )
-        if filepath:
-            self.output_path.setText(filepath)
+        dirpath = QFileDialog.getExistingDirectory(self, "Select Output Directory", "")
+        if dirpath:
+            self.output_path.setText(dirpath)
 
     def confirmed(self):
         model_path = self.model_file.text()
-        audio_path = self.audio_file.text()
+
+        if not self.audio_files:
+            print("No audio files selected.")
+            return
+
         model = self.model_selector.currentIndex()
         output_path = self.output_path.text()
+
+        if not output_path or not os.path.exists(output_path):
+            print("Invalid ouptut directory path.")
+            return
 
         if model == 0:
             model = DenoisingUNet()
@@ -89,7 +98,12 @@ class DenoiseSelectorWindow(QWidget):
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        denoise_and_save_wav(model, model_path, audio_path, output_path, device)
+        for in_file_path in self.audio_files:
+            filename = os.path.basename(in_file_path)
+            out_file_path = os.path.join(output_path, filename)
+
+            denoise_and_save_wav(model, model_path, in_file_path, out_file_path, device)
+        print("Batch processing complete")
 
 
 def main():

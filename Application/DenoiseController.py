@@ -4,6 +4,12 @@ from RTSEWD import DenoisingRTSEWD
 from UNet import DenoisingUNet
 import soundfile as sf
 import numpy as np
+import pesq as pq
+from scipy.io import wavfile
+
+import torch
+
+from PreProcess import load_audio, preprocess_audio
 
 
 def denoise_and_save_wav(model, weight_file_path, in_file_path, out_file_path, device):
@@ -86,3 +92,24 @@ def denoise_and_save_wav_rtsewd(
     audio_np = np.clip(audio_np, -1.0, 1.0)
 
     sf.write(out_file_path, audio_np, samplerate=sample_rate)
+
+
+def calculate_pesq(clean_file, noisy_file, target_sr=16000):
+    clean_wave, clean_sr = load_audio(clean_file)
+    noisy_wave, noisy_sr = load_audio(noisy_file)
+
+    clean_wave, target_sr = preprocess_audio(
+        clean_wave, clean_sr, target_sample_rate=target_sr
+    )
+    noisy_wave, target_sr = preprocess_audio(
+        noisy_wave, noisy_sr, target_sample_rate=target_sr
+    )
+
+    clean_np = clean_wave.squeeze().cpu().numpy()
+    noisy_np = noisy_wave.squeeze().cpu().numpy()
+
+    min_length = min(len(clean_np), len(noisy_np))
+    clean_np = clean_np[:min_length]
+    noisy_np = noisy_np[:min_length]
+
+    return pq.pesq(target_sr, clean_np, noisy_np, "wb")

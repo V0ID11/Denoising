@@ -1,6 +1,8 @@
 Data/
 .venv/
 /checkpoints/test_outputs/
+/checkpoints/*.wav
+/checkpoints_rtsewd/*.wav
 /Application/__pycache__/
 /checkpoints_rtsewd/test_outputs/
 clean_testset_wav/

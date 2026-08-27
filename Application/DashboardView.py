@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 
 import DenoisingView
 import AnalysisView
+import PesqView
 
 
 class DashboardHomeWidget(QWidget):
@@ -28,6 +29,9 @@ class DashboardHomeWidget(QWidget):
 
         self.denoiseButton = QPushButton("Denoising View")
         layout.addWidget(self.denoiseButton)
+
+        self.pesqButton = QPushButton("Pesq View")
+        layout.addWidget(self.pesqButton)
 
 
 class DashboardView(QMainWindow):
@@ -48,8 +52,12 @@ class DashboardView(QMainWindow):
         self.denoise_widget = DenoisingView.DenoiseSelectorWindow()
         self.stackedWidget.addWidget(self.denoise_widget)
 
+        self.pesq_widget = PesqView.PesqProcessorWidget()
+        self.stackedWidget.addWidget(self.pesq_widget)
+
         self.home_widget.analysisButton.clicked.connect(self.goToAnalysisView)
         self.home_widget.denoiseButton.clicked.connect(self.goToDenoiseView)
+        self.home_widget.pesqButton.clicked.connect(self.goToPesqView)
 
         self.add_navigation_bar()
 
@@ -80,6 +88,10 @@ class DashboardView(QMainWindow):
 
     def goToDenoiseView(self):
         self.stackedWidget.setCurrentWidget(self.denoise_widget)
+        self.back_button.show()
+
+    def goToPesqView(self):
+        self.stackedWidget.setCurrentWidget(self.pesq_widget)
         self.back_button.show()
 
 

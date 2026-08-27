@@ -6,3 +6,4 @@ matplotlib
 PyQt6
 scipy
 pyqtgraph
+pesq
