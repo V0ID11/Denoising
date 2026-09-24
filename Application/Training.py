@@ -107,14 +107,14 @@ def save_denoised_wavs(model, pairs, device, sample_rate=16000, n_fft=512,
 
 def main():
     # ---- config ----
-    noisy_dir = "Data/noisy_trainset_28spk_wav/noisy_trainset_28spk_wav"
-    clean_dir = "Data/clean_trainset_28spk_wav/clean_trainset_28spk_wav"
+    noisy_dir = "../noisy_trainset_28spk_wav"
+    clean_dir = "../clean_trainset_28spk_wav"
     batch_size = 16
     num_epochs = 50
     learning_rate = 1e-3
     weight_decay = 1e-2         
     early_stop_patience = 10     
-    checkpoint_path = "checkpoints/best_model.pt"
+    checkpoint_path = "../checkpoints/best_model.pt"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -169,7 +169,7 @@ def main():
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
 
-    save_denoised_wavs(model, val_pairs, device, output_dir="checkpoints/test_outputs")
+    save_denoised_wavs(model, val_pairs, device, output_dir="../checkpoints/test_outputs")
 
 
 if __name__ == "__main__":
