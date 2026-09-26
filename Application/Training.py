@@ -2,7 +2,7 @@ import os
 
 import torch
 import torch.nn as nn
-from torch.optim import AdamW
+from torch.optim import AdamW, Adam, RMSprop, SGD
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 
@@ -105,39 +105,18 @@ def save_denoised_wavs(model, pairs, device, sample_rate=16000, n_fft=512,
     print("Finished saving .wav files successfully!")
 
 
-def main():
-    # ---- config ----
-    noisy_dir = "../noisy_trainset_28spk_wav"
-    clean_dir = "../clean_trainset_28spk_wav"
-    batch_size = 16
-    num_epochs = 50
-    learning_rate = 1e-3
-    weight_decay = 1e-2         
-    early_stop_patience = 10     
-    checkpoint_path = "../checkpoints/best_model.pt"
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
-
+def train_epochs(model, 
+                train_loader, 
+                val_loader, 
+                num_epochs,
+                optimizer, 
+                criterion, 
+                scheduler, 
+                early_stop_patience,
+                device, 
+                checkpoint_path, 
+                best_val_loss=float("inf")):
     
-    all_pairs = pair_noisy_clean_files(noisy_dir, clean_dir)
-    train_pairs, val_pairs = split_pairs_by_speaker(all_pairs)
-    print(f"Train pairs: {len(train_pairs)}, Val pairs: {len(val_pairs)}")
-
-    train_dataset = DenoisingSTFTDataset(noisy_dir, clean_dir, pairs=train_pairs)
-    val_dataset = DenoisingSTFTDataset(noisy_dir, clean_dir, pairs=val_pairs)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
-
-    
-    model = DenoisingUNet().to(device)
-    optimizer = AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    criterion = nn.L1Loss()
-    scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=3)
-
-    os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
-    best_val_loss = float("inf")
     epochs_without_improvement = 0
 
     
@@ -165,6 +144,73 @@ def main():
             if epochs_without_improvement >= early_stop_patience:
                 print(f"No improvement for {early_stop_patience} epochs -- stopping early at epoch {epoch}.")
                 break
+
+    return best_val_loss
+        
+
+def hyperparameter_grid():
+    learning_rates = [1e-4,5e-4,1e-3, 5e-3, 1e-2]
+    weight_decays = [5e-3,1e-2, 5e-2,1e-1]
+    optimizers = ["AdamW", "Adam", "RMSProp", "SGD"]
+    batch_sizes = [8, 16, 32, 64]
+    
+    return learning_rates, weight_decays, optimizers, batch_sizes
+
+def main():
+    # ---- config ----
+    noisy_dir = "../noisy_trainset_28spk_wav"
+    clean_dir = "../clean_trainset_28spk_wav"
+    batch_size = 16
+    num_epochs = 50
+    learning_rate = 1e-3
+    weight_decay = 1e-2         
+    early_stop_patience = 10     
+    checkpoint_path = "../checkpoints/best_model.pt"
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+
+    lrs, wds, optims, batchs = hyperparameter_grid()
+
+    all_pairs = pair_noisy_clean_files(noisy_dir, clean_dir)
+    train_pairs, val_pairs = split_pairs_by_speaker(all_pairs)
+    print(f"Train pairs: {len(train_pairs)}, Val pairs: {len(val_pairs)}")
+    best_loss = float("inf")
+    best_params = ()
+
+    for lr in lrs:
+        for wd in wds:
+            for optim in optims:
+                for batch in batchs:  
+                    train_dataset = DenoisingSTFTDataset(noisy_dir, clean_dir, pairs=train_pairs)
+                    val_dataset = DenoisingSTFTDataset(noisy_dir, clean_dir, pairs=val_pairs)
+
+                    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
+                    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
+
+    
+                    model = DenoisingUNet().to(device)
+
+                    if optim == "AdamW":
+                        optimizer = AdamW(model.parameters(), lr=lr, weight_decay=wd)
+                    elif optim == "Adam":
+                        optimizer = Adam(model.parameters(),lr=lr,weight_decay=wd)
+                    elif optim == "RMSProp":
+                        optimizer = RMSprop(model.parameters(), lr=lr, weight_decay=wd)
+                    elif optim == "SGD":
+                        optimizer = SGD(model.parameters(), lr=lr, weight_decay=wd)
+                    criterion = nn.L1Loss()
+                    scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=3)
+
+                    os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+    
+
+                    loss = train_epochs(model, train_loader, val_loader, num_epochs, optimizer, criterion, scheduler, early_stop_patience, device, checkpoint_path, best_loss)
+                    if loss < best_loss:
+                        best_loss = loss 
+                        best_params = (lr,wd,optim,batch)
+
+
 
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
