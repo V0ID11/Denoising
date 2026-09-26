@@ -205,13 +205,13 @@ def main():
                     os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
     
 
-                    loss = train_epochs(model, train_loader, val_loader, num_epochs, optimizer, criterion, scheduler, early_stop_patience, device, checkpoint_path, best_loss)
+                    loss = train_epochs(model, train_loader, val_loader, num_epochs, optimizer, criterion, scheduler, early_stop_patience, device, checkpoint_path)
                     if loss < best_loss:
                         best_loss = loss 
                         best_params = (lr,wd,optim,batch)
 
 
-
+    print(best_params)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
 
